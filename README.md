@@ -4,11 +4,28 @@
 
 Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack) is an opinionated Cursor skill stack that improves agent outcomes. This is a port for Claude Code, Codex, Pi, GitHub Copilot, Muse, and other agent harnesses. It tracks upstream and also carries named policy forks, each declared in [`tools/forks.json`](tools/forks.json).
 
+**This fork exists for OpenCode.** It carries the whole pstack setup from [`michael-denyer/pstack-claude`](https://github.com/michael-denyer/pstack-claude) unchanged and adds the OpenCode packaging upstream leaves to a manual skills-only install: a one-command installer, the pstack subagents in OpenCode's agent format, a session-start routing plugin, and the model-sheet wiring. See [docs/opencode.md](docs/opencode.md). Everything below still applies; the OpenCode entry under Install is the path this fork maintains.
+
 Tell `poteto-mode` your goal and it will invoke the correct workflow for the task. It keeps your code concise, simple and verified.
 
 For concurrency bugs and invariants that tests cannot reach, `/create-formal-verification-skill` picks the riskiest property in your code, verifies it with a tool that fits, and leaves a project skill the next agent reruns. The separate [agent-formal-verify](https://github.com/michael-denyer/agent-formal-verify) plugin goes deeper on the method, with guided TLA+ model checking, Lean proofs, and Kani for Rust.
 
 ## Install
+
+<details>
+<summary><strong>OpenCode</strong></summary>
+
+Run in your terminal:
+
+```shell
+git clone https://github.com/huyhuyhuy8s/pstack-opencode
+cd pstack-opencode
+./install.sh
+```
+
+Restart OpenCode afterwards. The installer links the skills into `~/.agents/skills/`, installs the pstack subagents and the routing plugin into `~/.config/opencode/`, seeds the model sheet, and wires it through `opencode.json`. Run the `setup-pstack` skill in a session to pick per-role models. Details, updating, and uninstalling: [docs/opencode.md](docs/opencode.md).
+
+</details>
 
 <details>
 <summary><strong>Claude Code</strong></summary>
