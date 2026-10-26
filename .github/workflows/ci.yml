@@ -201,7 +201,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The suite imports crc32 from node:zlib, which needs Node 22.2 or later.
+      # The Node the suite was measured on. It imports crc32 from node:zlib,
+      # which needs Node 20.15, or 22.2 and later.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.22.1"
