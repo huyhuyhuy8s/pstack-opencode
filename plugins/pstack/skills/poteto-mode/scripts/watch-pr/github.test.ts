@@ -842,93 +842,58 @@ describe("context and stack discovery", () => {
 
   it("does not use a fork's same-named head as a stack parent", () => {
     const ordered = orderStack(context, "main", [
-      {
-        number: parsePrNumber(41),
-        headRepository: { owner: "contributor", repo: "repo" },
-        headRefName: "base-feature",
-        baseRefName: "main",
-      },
-      {
-        number: context.number,
-        headRepository: { owner: "owner", repo: "repo" },
-        headRefName: "feature",
-        baseRefName: "base-feature",
-      },
+      { number: parsePrNumber(41), headRefName: "base-feature", baseRefName: "main", headRepository: { owner: "contributor", repo: "repo" } },
+      { number: context.number, headRefName: "feature", baseRefName: "base-feature", headRepository: { owner: "owner", repo: "repo" } },
     ]);
-    expect(numbers(ordered)).toEqual([42]);
+    expect(ordered.map((item) => Number(item.number))).toEqual([42]);
   });
 
   it("does not attach upstream branch children to a fork head", () => {
     const ordered = orderStack(context, "main", [
-      {
-        number: context.number,
-        headRepository: { owner: "contributor", repo: "repo" },
-        headRefName: "feature",
-        baseRefName: "main",
-      },
-      {
-        number: parsePrNumber(43),
-        headRepository: { owner: "owner", repo: "repo" },
-        headRefName: "upstack",
-        baseRefName: "feature",
-      },
+      { number: context.number, headRefName: "feature", baseRefName: "main", headRepository: { owner: "contributor", repo: "repo" } },
+      { number: parsePrNumber(43), headRefName: "upstack", baseRefName: "feature", headRepository: { owner: "owner", repo: "repo" } },
     ]);
-    expect(numbers(ordered)).toEqual([42]);
+    expect(ordered.map((item) => Number(item.number))).toEqual([42]);
   });
 
   it("terminates when an unrelated fork opens main against main", () => {
     // Bound the subprocess so this regression reports a failure instead of hanging the suite.
     const program = `import { orderStack } from ${JSON.stringify(import.meta.dir + "/github.ts")};
       console.log(JSON.stringify(orderStack(${JSON.stringify(context)}, "main", [
-        { number: 41, headRepository: { owner: "contributor", repo: "repo" }, headRefName: "main", baseRefName: "main" },
-        { number: 42, headRepository: { owner: "owner", repo: "repo" }, headRefName: "feature", baseRefName: "main" }
+        { number: 41, headRefName: "main", baseRefName: "main", headRepository: { owner: "contributor", repo: "repo" } },
+        { number: 42, headRefName: "feature", baseRefName: "main", headRepository: { owner: "owner", repo: "repo" } }
       ])));`;
-    const child = spawnSync(process.execPath, ["-e", program], {
-      encoding: "utf8",
-      timeout: 2000,
-    });
+    const child = spawnSync(process.execPath, ["-e", program], { encoding: "utf8", timeout: 2000 });
     expect(child.error).toBeUndefined();
     expect(child.status).toBe(0);
-    expect(
-      JSON.parse(child.stdout).map((item: { number: number }) => item.number)
-    ).toEqual([42]);
+    expect(JSON.parse(child.stdout).map((item: { number: number }) => item.number)).toEqual([42]);
   });
 
   it("requests and parses fork identity from gh before stack discovery", () => {
     const directory = mkdtempSync(join(tmpdir(), "watch-pr-fork-"));
     try {
-      writeFileSync(
-        join(directory, "gh"),
-        `#!/bin/sh
+      writeFileSync(join(directory, "gh"), `#!/bin/sh
 case "$*" in
   *number,headRefName,baseRefName,headRepository,headRepositoryOwner*) ;;
   *) exit 2 ;;
 esac
 printf '%s\\n' '[{"number":42,"headRefName":"feature","baseRefName":"main","headRepository":{"name":"repo"},"headRepositoryOwner":{"login":"contributor"}}]'
-`,
-        { mode: 0o755 }
-      );
+`, { mode: 0o755 });
       const program = `import { GhGitHubReader } from ${JSON.stringify(import.meta.dir + "/github.ts")};
         import { WatchDeadline } from ${JSON.stringify(import.meta.dir + "/deadline.ts")};
-        const reader = new GhGitHubReader(new WatchDeadline(0, Date.now));
-        console.log(JSON.stringify(await reader.openPullRequests({ owner: "owner", repo: "repo" })));`;
+        console.log(JSON.stringify(await new GhGitHubReader(new WatchDeadline(0, Date.now)).openPullRequests({ owner: "owner", repo: "repo" })));`;
       const child = spawnSync(process.execPath, ["-e", program], {
-        encoding: "utf8",
-        timeout: 2000,
+        encoding: "utf8", timeout: 2000,
         env: { ...process.env, PATH: directory + ":" + process.env.PATH },
       });
       expect(child.error).toBeUndefined();
       expect(child.status).toBe(0);
       expect(JSON.parse(child.stdout)).toEqual([
-        {
-          number: 42,
-          headRepository: { owner: "contributor", repo: "repo" },
-          headRefName: "feature",
-          baseRefName: "main",
-        },
+        { number: 42, headRefName: "feature", baseRefName: "main", headRepository: { owner: "contributor", repo: "repo" } },
       ]);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
 });

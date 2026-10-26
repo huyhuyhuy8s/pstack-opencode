@@ -12,7 +12,7 @@ Upstream fixed three bugs in the poteto-mode scripts. The port had already fixed
 
 The README now says that Claude Code leaves auto-update off for third-party marketplaces, and how to turn it on or update once by hand. Upstream's `worktree-audit.sh` fix for GNU `stat` does not apply, because the port excludes that script and runs `worktree-audit.mjs`.
 
-Measured with `bun tools/sync.mjs pstack e73df47`: 83 files unchanged, 38 excluded, 4 updated, 28 added, 5 merged, and 6 conflicts, each resolved by hand as described above. Upstream renumbered the `swarm` step that names the worker model from 4 to 3, so a second substitution rule matches the new text, and the rule for step 4 stays until the next sync, because the sync uses it to read the old pin.
+Measured with `bun tools/sync.mjs pstack e73df47`: 83 files unchanged, 38 excluded, 4 updated, 28 added, 5 merged, and 6 conflicts, each resolved by hand as described above. Upstream renumbered the `swarm` step that names the worker model from 4 to 3, so the substitution for that sentence is now two rules that leave the step number out and match either text.
 
 ## 0.9.102 - The skill link validator keeps angle-bracket destinations
 

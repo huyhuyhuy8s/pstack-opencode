@@ -185,9 +185,8 @@ jobs:
         run: bun test orch watch-pr check-plan.test.ts
       # Pinned here, not in package.json, so bun.lock stays identical to
       # upstream's. 3.6.2 reproduces upstream's watch-pr files byte for byte,
-      # except fakes.test-helper.ts, which .prettierignore lists, and
-      # github.test.ts, which upstream no longer formats and the port still
-      # does; later releases rewrap types.ts too.
+      # except fakes.test-helper.ts and github.test.ts, which .prettierignore
+      # lists; later releases rewrap types.ts too.
       - name: Check formatting
         run: bunx prettier@3.6.2 --check .
 
