@@ -211,6 +211,11 @@
       "rationale": "the Agent tool has no environment parameter"
     },
     {
+      "pattern": "`environment: \"cloud\"`, `run_in_background: true`, and the step 3 model, left unset for `auto` or `inherit-parent`. Use `environment: \"local\"` only when the worker needs access to something on the user's computer.",
+      "replacement": "`run_in_background: true`, and the step 3 model, left unset for `auto` or `inherit-parent`. Claude Code subagents all run on this machine, so isolation comes from the worktree or output directory assigned in Phase A, not from a remote environment.",
+      "rationale": "the Agent tool has no environment parameter; upstream e73df47 renumbered swarm's model step from 4 to 3"
+    },
+    {
       "pattern": "When a worker must start from a non-default pushed branch, pass `cloud_base_branch`.",
       "replacement": "When a worker must start from a non-default branch, check that branch out in the worker's own worktree and name the worktree path in its brief.",
       "rationale": "the Agent tool has no base-branch parameter"
