@@ -92,14 +92,12 @@ describe("applySubstitutions", () => {
     expect(text).toBe("Prefer AskUserQuestion here.");
   });
 
-  test("the override sheet path survives the generic .cursor/rules/ rule", () => {
+  test("the override sheet path becomes the port's sheet name", () => {
     const { text } = applySubstitutions(
-      "Use `arena runners` from `~/.cursor/rules/pstack-models.mdc` when present. Rules in .cursor/rules/ apply.",
+      "Use `arena runners` from `~/.cursor/rules/pstack-models.mdc` when present.",
       RULES.substitutions,
     );
-    expect(text).toBe(
-      "Use `arena runners` from `pstack-models.md` when present. Rules in CLAUDE.md imports apply.",
-    );
+    expect(text).toBe("Use `arena runners` from `pstack-models.md` when present.");
   });
 
   test("the driver-skill and model-default phrases rewrite as the port writes them", () => {
@@ -110,7 +108,6 @@ describe("applySubstitutions", () => {
         "Drive via the relevant control skill and through its control skill.",
         "<control skill path> and the control skill's commands",
         "Multiple `Task` calls in the Task tool.",
-        "on \"restart Cursor\"",
       ].join("\n"),
       RULES.substitutions,
     );
@@ -121,7 +118,6 @@ describe("applySubstitutions", () => {
         "Drive via the relevant driver skill and through its driver skill.",
         "<driver skill path> and the driver skill's commands",
         "Multiple `Agent` calls in the `Agent` tool.",
-        "on \"restart Claude Code\"",
       ].join("\n"),
     );
   });
@@ -244,16 +240,6 @@ describe("applySubstitutions", () => {
       'This playbook replaces the bundled **babysit** skill for these requests, for "address the review-bot comments".',
     ],
     [
-      "skills/poteto-mode/playbooks/autopilot-full.md",
-      "One Cursor cloud agent per PR owns build, skeptical Bugbot triage, and the fixes.",
-      "One background subagent per PR, in its own worktree, owns build, skeptical review-bot triage, and the fixes.",
-    ],
-    [
-      "skills/poteto-mode/playbooks/autopilot-stack.md",
-      "On the operator's explicit go, arm a `/goal` with the full program objective. The goal continues across turns until the chain is done.",
-      "On the operator's explicit go, write the full program objective into the standing orders and restate it in your todolist. That objective stands across turns until the chain is done.",
-    ],
-    [
       "agents/poteto-agent.md",
       "search `~/.cursor/plugins/` for a file whose path ends in `skills/poteto-mode/SKILL.md`. If more than one file matches, use the copy whose `.cursor-plugin/plugin.json` has the highest `version`.",
       "search `${CLAUDE_CODE_PLUGIN_CACHE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins}/` for a file whose path ends in `skills/poteto-mode/SKILL.md`. If more than one file matches, use the copy whose `.claude-plugin/plugin.json` has the highest `version`.",
@@ -337,6 +323,18 @@ describe("denylistHits", () => {
     expect(denylistHits("playbook.md", "default `gpt-6-sol-max`", RULES.denylist)).toHaveLength(1);
     expect(denylistHits("arena.md", "one each on `claude-opus-5-5-max`", RULES.denylist)).toHaveLength(1);
     expect(denylistHits("how.md", "the role line in the `pstack-models.mdc` rule", RULES.denylist)).toHaveLength(1);
+  });
+
+  test("a Cursor phrase that no rule rewrites any more fails the scan if upstream brings it back", () => {
+    for (const line of [
+      'on "restart Cursor"',
+      "Rules in .cursor/rules/ apply.",
+      "One Cursor cloud agent per PR owns build.",
+      "arm a `/goal` with the full program objective.",
+    ]) {
+      const { text } = applySubstitutions(line, RULES.substitutions);
+      expect(denylistHits("playbook.md", text, RULES.denylist)).toHaveLength(1);
+    }
   });
 
   test("a model name in an example is not a Cursor slug", () => {
