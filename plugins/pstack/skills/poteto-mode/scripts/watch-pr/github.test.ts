@@ -883,28 +883,38 @@ describe("context and stack discovery", () => {
         { number: 41, headRepository: { owner: "contributor", repo: "repo" }, headRefName: "main", baseRefName: "main" },
         { number: 42, headRepository: { owner: "owner", repo: "repo" }, headRefName: "feature", baseRefName: "main" }
       ])));`;
-    const child = spawnSync(process.execPath, ["-e", program], { encoding: "utf8", timeout: 2000 });
+    const child = spawnSync(process.execPath, ["-e", program], {
+      encoding: "utf8",
+      timeout: 2000,
+    });
     expect(child.error).toBeUndefined();
     expect(child.status).toBe(0);
-    expect(JSON.parse(child.stdout).map((item: { number: number }) => item.number)).toEqual([42]);
+    expect(
+      JSON.parse(child.stdout).map((item: { number: number }) => item.number)
+    ).toEqual([42]);
   });
 
   it("requests and parses fork identity from gh before stack discovery", () => {
     const directory = mkdtempSync(join(tmpdir(), "watch-pr-fork-"));
     try {
-      writeFileSync(join(directory, "gh"), `#!/bin/sh
+      writeFileSync(
+        join(directory, "gh"),
+        `#!/bin/sh
 case "$*" in
   *number,headRefName,baseRefName,headRepository,headRepositoryOwner*) ;;
   *) exit 2 ;;
 esac
 printf '%s\\n' '[{"number":42,"headRefName":"feature","baseRefName":"main","headRepository":{"name":"repo"},"headRepositoryOwner":{"login":"contributor"}}]'
-`, { mode: 0o755 });
+`,
+        { mode: 0o755 }
+      );
       const program = `import { GhGitHubReader } from ${JSON.stringify(import.meta.dir + "/github.ts")};
         import { WatchDeadline } from ${JSON.stringify(import.meta.dir + "/deadline.ts")};
         const reader = new GhGitHubReader(new WatchDeadline(0, Date.now));
         console.log(JSON.stringify(await reader.openPullRequests({ owner: "owner", repo: "repo" })));`;
       const child = spawnSync(process.execPath, ["-e", program], {
-        encoding: "utf8", timeout: 2000,
+        encoding: "utf8",
+        timeout: 2000,
         env: { ...process.env, PATH: directory + ":" + process.env.PATH },
       });
       expect(child.error).toBeUndefined();
