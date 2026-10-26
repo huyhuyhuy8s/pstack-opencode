@@ -28,6 +28,7 @@ import {
   parseRule,
   parseSubstitutions,
   syncComponent,
+  unmatchedRules,
 } from "../tools/sync.mjs";
 
 const RULES = parseSubstitutions(JSON.parse(readFileSync(join(import.meta.dir, "../tools/substitutions.json"), "utf8")));
@@ -313,6 +314,53 @@ describe("parseForks", () => {
   test("an unknown component or a path outside the component fails", () => {
     expect(() => parseForks({ other: {} }, components)).toThrow('forks.json: unknown component "other"');
     expect(() => parseForks({ kit: { "tools/s.md": entry } }, components)).toThrow("not under plugins/pstack/skills");
+  });
+});
+
+describe("unmatchedRules", () => {
+  const rules = (...substitutions) =>
+    parseSubstitutions({
+      substitutions: substitutions.map((rule) => ({ replacement: "x", rationale: "fixture", ...rule })),
+      denylist: [],
+    }).substitutions;
+
+  test("lists the rules that match no file in any tree, in rule order", () => {
+    const first = tree({ "skills/a.md": "alpha\n" });
+    const second = tree({ "b.md": "beta\n" });
+    const unmatched = unmatchedRules(rules({ pattern: "gamma" }, { pattern: "alpha" }, { pattern: "beta" }, { regex: "del+ta" }), [
+      { dir: first, exclude: [] },
+      { dir: second, exclude: [] },
+    ]);
+    expect(unmatched).toEqual(["gamma", "del+ta"]);
+  });
+
+  test("skips excluded, binary, and symlinked files", () => {
+    const outside = tree({ "linked.md": "linked\n" });
+    const dir = tree({ "docs/excluded.md": "excluded\n", "kept.md": "kept\n" });
+    writeFileSync(join(dir, "binary.png"), Buffer.from("binary\0"));
+    symlinkSync(join(outside, "linked.md"), join(dir, "link.md"));
+    const unmatched = unmatchedRules(
+      rules({ pattern: "excluded" }, { pattern: "binary" }, { pattern: "linked" }, { pattern: "kept" }),
+      [{ dir, exclude: ["docs/"] }],
+    );
+    expect(unmatched).toEqual(["excluded", "binary", "linked"]);
+  });
+
+  test("scopes a files rule to the path inside its tree", () => {
+    const dir = tree({ "skills/a.md": "word\n", "skills/b.md": "term\n" });
+    const unmatched = unmatchedRules(
+      rules({ regex: "word", files: "^skills/a\\.md$" }, { regex: "term", files: "^skills/a\\.md$" }),
+      [{ dir, exclude: [] }],
+    );
+    expect(unmatched).toEqual(["term in ^skills/a\\.md$"]);
+  });
+
+  test("counts a rule whose text an earlier rule rewrote as unmatched", () => {
+    const dir = tree({ "a.md": "cloud workers\n" });
+    const unmatched = unmatchedRules(rules({ pattern: "cloud", replacement: "local" }, { regex: "cloud workers" }), [
+      { dir, exclude: [] },
+    ]);
+    expect(unmatched).toEqual(["cloud workers"]);
   });
 });
 
@@ -1555,6 +1603,29 @@ describe("sync CLI", () => {
     const local = () => readFileSync(join(port, "plugins/pstack/skills/s.md"), "utf8");
     return { oldSha, newSha, scratch, run, runAt, pin, local, port };
   }
+
+  test("--check-rules fails on a rule that matches nothing at the pin, and passes once it is gone", () => {
+    const { port, scratch } = cli({ oldText: "use the Task tool\n", newText: "use the Task tool\n", localText: "" });
+    const rule = (pattern) => ({ pattern, replacement: "x", rationale: "fixture" });
+    const check = (...substitutions) => {
+      writeFileSync(join(port, "tools/substitutions.json"), JSON.stringify({ substitutions, denylist: [] }));
+      return spawnSync(process.execPath, [join(port, "tools/sync.mjs"), "--check-rules"], {
+        encoding: "utf8",
+        env: { ...process.env, TMPDIR: scratch },
+      });
+    };
+
+    const failing = check(rule("Task tool"), rule("cloud workers"));
+    expect(failing.status).toBe(1);
+    expect(failing.stderr).toContain("FAIL: substitution rules that match no upstream file");
+    expect(failing.stderr).toContain("  cloud workers\n");
+    expect(failing.stderr).not.toContain("  Task tool\n");
+
+    const passing = check(rule("Task tool"));
+    expect(passing.status).toBe(0);
+    expect(passing.stdout).toContain("ok: each of the 1 substitution rules matches upstream at the pinned SHAs");
+    expect(readdirSync(scratch).filter((name) => name.startsWith("pstack-"))).toEqual([]);
+  });
 
   test("a denylist failure exits 1 and removes its scratch clone", () => {
     const { run, scratch } = cli({ oldText: "one\n", newText: "run control-cli\n", localText: "one\n" });
