@@ -2,6 +2,7 @@
 // Sync this port forward to a new upstream SHA.
 //
 //   bun tools/sync.mjs <component> <new-sha> [--dry-run]
+//   bun tools/sync.mjs --check-rules
 //
 // Reads tools/upstream.json (remote, per-component pin, and the `exclude`
 // list of upstream paths the port deliberately does not carry) and
